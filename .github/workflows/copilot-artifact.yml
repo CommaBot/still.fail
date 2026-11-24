@@ -89,7 +89,14 @@ jobs:
         with: { node-version: 24 }
       - run: corepack enable && corepack prepare pnpm@10.33.0 --activate
       - uses: ./.github/actions/msvc
-      - uses: ./.github/actions/mbui-moonbit
+      - name: Install MoonBit
+        shell: pwsh
+        run: |
+          $env:MOON_HOME = "C:\moon"
+          irm https://cli.moonbitlang.com/install/powershell.ps1 | iex
+          "C:\moon\bin" | Out-File -Append $env:GITHUB_PATH
+          "MOON_HOME=C:\moon" | Out-File -Append $env:GITHUB_ENV
+      - run: moon version --all
       - name: Fetch the Windows shell and engine
         run: |
           node scripts/native.ts fetch shell win32-x64
