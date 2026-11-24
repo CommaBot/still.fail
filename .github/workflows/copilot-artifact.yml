@@ -1,0 +1,75 @@
+# A downloadable Linux station bundle for the Copilot runtime. It is a test artifact, not a release: the native parts
+# and the source build are put together here so a person can download it from the run.
+name: copilot artifact
+on:
+  workflow_dispatch:
+  push:
+    branches: ["copilot-runtime"]
+    paths:
+      - "station/**"
+      - "docker/station/**"
+      - "client/**"
+      - "web/**"
+      - "apps/mbui/**"
+      - ".github/workflows/copilot-artifact.yml"
+permissions:
+  contents: read
+jobs:
+  bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: corepack enable && corepack prepare pnpm@10.33.0 --activate
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install the station's dependencies
+        working-directory: station
+        run: pnpm install --frozen-lockfile
+      - name: Build the station
+        working-directory: station
+        run: pnpm build
+      - name: Build the runner and mesh addon
+        run: |
+          printf 'MESH=%s\n' "$(node scripts/native.ts file mesh | tail -1)" >> "$GITHUB_ENV"
+          printf 'RUNNER=%s\n' "$(node scripts/native.ts file runner | tail -1)" >> "$GITHUB_ENV"
+      - name: Build station-load
+        working-directory: station/tools/load
+        run: cargo build --release --locked
+      - name: Put the bundle together
+        run: |
+          set -eu
+          out=artifact/stillfail-copilot
+          mkdir -p "$out/app" "$out/bin"
+          cp -R station/dist "$out/app/station"
+          cp "$MESH" "$out/app/station/mesh.node"
+          cp "$RUNNER" "$out/app/station/stillfail-runner"
+          cp -RL station/node_modules "$out/app/station/node_modules"
+          cp docker/station/run.sh "$out/run.sh"
+          cp docker/station/init.mjs "$out/init.mjs"
+          cp docker/station/gateway.mjs "$out/gateway.mjs"
+          cp station/tools/load/target/release/station-load "$out/bin/station-load"
+          chmod +x "$out/run.sh" "$out/bin/station-load" "$out/app/station/mesh.node" "$out/app/station/stillfail-runner"
+          cat > "$out/README.md" <<'MD'
+          # still.fail · GitHub Copilot (test bundle)
+
+          ```sh
+          export COPILOT_GITHUB_TOKEN=$(gh auth token)
+          ./run.sh            # station on 8899, chat on http://127.0.0.1:8080
+          ```
+
+          This is a disposable local test workspace (`station-load setup`), not a workspace-enrolled station.
+          `COPILOT_GITHUB_TOKEN` must be a `gho_`, `ghu_` or `github_pat_` token.
+          MD
+          tar -czf artifact/stillfail-copilot-linux-x64.tar.gz -C artifact stillfail-copilot
+          git diff origin/main...HEAD > artifact/copilot-runtime.patch || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stillfail-copilot-linux-x64
+          path: |
+            artifact/stillfail-copilot-linux-x64.tar.gz
+            artifact/copilot-runtime.patch
+          if-no-files-found: error
+          retention-days: 14
