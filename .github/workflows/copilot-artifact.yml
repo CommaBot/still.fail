@@ -147,7 +147,7 @@ jobs:
         env:
           MBUI_FRESH: "1"
           MBUI_WIN_CORE: "0"
-          CSPLIT_JOBS: "1"
+          MBC_SPLIT: "0"
           MBC_STORE: ${{ github.workspace }}/.ci/mbc-store
           HBC_CACHE: ${{ github.workspace }}/.ci/hbc
         run: |
