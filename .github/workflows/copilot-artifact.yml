@@ -74,3 +74,37 @@ jobs:
             artifact/copilot-runtime.patch
           if-no-files-found: error
           retention-days: 14
+
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: corepack enable && corepack prepare pnpm@10.33.0 --activate
+      - uses: ./.github/actions/msvc
+      - uses: ./.github/actions/mbui-moonbit
+      - name: Fetch the Windows shell and engine
+        run: |
+          node scripts/native.ts fetch shell win32-x64
+          node scripts/native.ts fetch engine win32-x64
+      - name: Install the client core
+        working-directory: client/core-ts
+        run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Build the Windows app and its installer
+        working-directory: apps/mbui
+        run: |
+          scripts/win.sh build
+          scripts/win.sh setup
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stillfail-copilot-windows
+          path: apps/mbui/out/setup/*.exe
+          if-no-files-found: error
+          retention-days: 14
