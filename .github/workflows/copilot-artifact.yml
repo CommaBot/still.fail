@@ -77,7 +77,7 @@ jobs:
 
   windows:
     runs-on: windows-2025
-    timeout-minutes: 45
+    timeout-minutes: 120
     defaults:
       run:
         shell: bash
@@ -104,8 +104,21 @@ jobs:
       - name: Install the client core
         working-directory: client/core-ts
         run: pnpm install --frozen-lockfile --prefer-offline
+      - uses: actions/cache@v4
+        with:
+          path: |
+            apps/mbui/mbui/_build
+            apps/mbui/out
+            .ci/hbc
+            .ci/mbc-store
+          key: copilot-win-${{ hashFiles('apps/mbui/**', 'client/core-ts/**') }}
+          restore-keys: copilot-win-
       - name: Build the Windows app and its installer
         working-directory: apps/mbui
+        env:
+          MBUI_FRESH: "1"
+          MBC_STORE: ${{ github.workspace }}/.ci/mbc-store
+          HBC_CACHE: ${{ github.workspace }}/.ci/hbc
         run: |
           bash -x scripts/win.sh build 2>&1 | tee winbuild.log
           scripts/win.sh setup
