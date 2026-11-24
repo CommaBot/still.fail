@@ -515,6 +515,24 @@ int32_t mbc_wait_any(void) {
     }
   if (n == 0) return -1;
   DWORD w = WaitForMultipleObjects((DWORD)n, hs, FALSE, INFINITE);
+  if (w == WAIT_FAILED) {
+    // A handle the wait will not take (WAIT_FAILED on a process handle that is
+    // nonetheless valid): ask each one, rather than failing the whole compile.
+    for (;;) {
+      for (int i = 0; i < n; i++) {
+        if (WaitForSingleObject(hs[i], 0) == WAIT_OBJECT_0) {
+          int32_t s = ids[i];
+          DWORD code = 1;
+          GetExitCodeProcess(slots[s], &code);
+          CloseHandle(slots[s]);
+          last_status = (int32_t)code;
+          slot_used[s] = 2;
+          return s;
+        }
+      }
+      Sleep(10);
+    }
+  }
   if (w >= WAIT_OBJECT_0 + (DWORD)n) return -1;
   int32_t s = ids[w - WAIT_OBJECT_0];
   DWORD code = 1;
