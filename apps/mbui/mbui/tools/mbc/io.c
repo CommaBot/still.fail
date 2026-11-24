@@ -458,6 +458,8 @@ int32_t mbc_spawn(moonbit_bytes_t words, moonbit_bytes_t cmdline, moonbit_bytes_
   }
   BOOL ok = CreateProcessA(NULL, cl, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi);
   DWORD error = ok ? 0 : GetLastError();
+  fprintf(stderr, "mbc: spawn slot=%d ok=%d error=%lu pid=%lu\n", s, (int)ok, (unsigned long)error, ok ? (unsigned long)pi.dwProcessId : 0UL);
+  fflush(stderr);
   free(cl);
   if (f != INVALID_HANDLE_VALUE) CloseHandle(f);
   if (!ok) {
@@ -514,8 +516,9 @@ int32_t mbc_wait_any(void) {
       hs[n] = slots[i];
       ids[n++] = i;
     }
-  if (n == 0) return -1;
+  if (n == 0) { fprintf(stderr, "mbc: wait with no slots\n"); fflush(stderr); return -1; }
   DWORD w = WaitForMultipleObjects((DWORD)n, hs, FALSE, INFINITE);
+  if (w == WAIT_FAILED) { fprintf(stderr, "mbc: wait failed n=%d error=%lu\n", n, (unsigned long)GetLastError()); fflush(stderr); }
   if (w == WAIT_FAILED) {
     // A handle the wait will not take (WAIT_FAILED on a process handle that is
     // nonetheless valid): ask each one, rather than failing the whole compile.
