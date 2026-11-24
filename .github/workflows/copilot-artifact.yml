@@ -107,7 +107,7 @@ jobs:
       - name: Build the Windows app and its installer
         working-directory: apps/mbui
         run: |
-          scripts/win.sh build
+          bash -x scripts/win.sh build 2>&1 | tee winbuild.log
           scripts/win.sh setup
       - uses: actions/upload-artifact@v4
         with:
