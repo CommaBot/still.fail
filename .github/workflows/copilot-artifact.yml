@@ -31,10 +31,11 @@ jobs:
       - name: Build the station
         working-directory: station
         run: pnpm build
-      - name: Build the runner and mesh addon
-        run: |
-          printf 'MESH=%s\n' "$(node scripts/native.ts file mesh | tail -1)" >> "$GITHUB_ENV"
-          printf 'RUNNER=%s\n' "$(node scripts/native.ts file runner | tail -1)" >> "$GITHUB_ENV"
+      - name: Build the mesh addon
+        working-directory: station/native/mesh
+        run: cargo build --release --locked
+      - name: Fetch the runner
+        run: printf 'RUNNER=%s\n' "$(node scripts/native.ts file runner | tail -1)" >> "$GITHUB_ENV"
       - name: Build station-load
         working-directory: station/tools/load
         run: cargo build --release --locked
@@ -44,7 +45,7 @@ jobs:
           out=artifact/stillfail-copilot
           mkdir -p "$out/app" "$out/bin"
           cp -R station/dist "$out/app/station"
-          cp "$MESH" "$out/app/station/mesh.node"
+          cp station/native/mesh/target/release/libstillfail_mesh.so "$out/app/station/mesh.node"
           cp "$RUNNER" "$out/app/station/stillfail-runner"
           cp -RL station/node_modules "$out/app/station/node_modules"
           cp docker/station/run.sh "$out/run.sh"
