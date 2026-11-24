@@ -3,6 +3,8 @@
 #   COPILOT_GITHUB_TOKEN=... ./run.sh
 set -eu
 APP=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+PATH="$APP/bin:$PATH"
+export PATH
 DATA=${DATA:-$APP/data}
 PORT=${PORT:-8899}
 MESH_PORT=${MESH_PORT:-4761}

@@ -47,7 +47,7 @@ jobs:
           cp -R station/dist "$out/app/station"
           cp station/native/mesh/target/release/libstillfail_mesh.so "$out/app/station/mesh.node"
           cp "$RUNNER" "$out/app/station/stillfail-runner"
-          cp -RL station/node_modules "$out/app/station/node_modules"
+          cp -a station/node_modules "$out/app/station/node_modules"
           cp docker/station/run.sh "$out/run.sh"
           cp docker/station/init.mjs "$out/init.mjs"
           cp docker/station/gateway.mjs "$out/gateway.mjs"

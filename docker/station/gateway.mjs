@@ -2,6 +2,7 @@
 // reads the station's SQLite entries. No cloud, no workspace enrollment: this is the local test workspace.
 import { execFile } from 'node:child_process'
 import { createServer } from 'node:http'
+import { DatabaseSync } from 'node:sqlite'
 import { promisify } from 'node:util'
 
 const run = promisify(execFile)
@@ -14,25 +15,29 @@ async function station(method, path, body = '') {
   const { stdout } = await run('station-load', ['send', DATA, STATION_ID, MESH_ADDR, method, path, body], {
     maxBuffer: 32 * 1024 * 1024,
   })
-  // station-load prints the body, then the status: the first JSON line is the answer.
-  return stdout.split('\n').find((line) => line.trim().startsWith('{')) ?? ''
+  // station-load prints the body and the status as two JSON lines, in either order: the one without `headers`.
+  const answers = stdout.split('\n').filter((line) => line.trim().startsWith('{')).map((line) => JSON.parse(line))
+  return answers.find((answer) => answer?.headers === undefined) ?? answers[0] ?? ''
 }
 
-async function entries(thread) {
-  const { stdout } = await run('sqlite3', ['-json', `${DATA}/stillfail.db`, `select n, author_kind, text, at from entries where thread='${thread}' order by n`], {
-    maxBuffer: 32 * 1024 * 1024,
-  })
-  return stdout.trim() === '' ? [] : JSON.parse(stdout)
+function entries(thread) {
+  const db = new DatabaseSync(`${DATA}/stillfail.db`)
+  try {
+    return db.prepare('select n, author_kind, text, at from entries where thread = ? order by n').all(Number(thread))
+  } finally {
+    db.close()
+  }
 }
 
 let session
 for (let i = 0; i < 90; i += 1) {
   try {
-    const made = JSON.parse(await station('POST', '/admin/api/sessions', JSON.stringify({ runtime: 'copilot', model: 'gpt-6.2-sol' })))
+    const made = await station('POST', '/admin/api/sessions', JSON.stringify({ runtime: 'copilot', model: 'gpt-6.2-sol' }))
     if (made?.thread?.id === undefined || made?.thread?.id === null) throw new Error(`no thread in ${JSON.stringify(made)}`)
     session = { key: made.key, thread: String(made.thread.id) }
     break
   } catch (error) {
+    if (i === 0 || i % 10 === 0) console.error(`session create attempt ${i + 1}: ${error.message}`)
     if (i === 89) {
       console.error(`could not create a Copilot session: ${error.message}`)
       process.exit(1)
