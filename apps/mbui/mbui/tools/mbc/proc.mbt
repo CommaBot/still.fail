@@ -50,6 +50,7 @@ fn wait_slot(slot : Int) -> Int {
   while true {
     let s = c_wait_any()
     if s < 0 {
+      eprint("mbc: wait_any returned -1 (slot \{slot})")
       return 127
     }
     let code = c_status()
@@ -103,7 +104,11 @@ fn run_inherit(argv : Array[Bytes]) -> Int {
     eprint("mbc: cannot run \{str(argv[0])}")
     return 127
   }
-  wait_slot(slot)
+  let code = wait_slot(slot)
+  if code == 127 {
+    eprint("mbc: child \{str(argv[0])} gave 127 (slot \{slot})")
+  }
+  code
 }
 
 ///|

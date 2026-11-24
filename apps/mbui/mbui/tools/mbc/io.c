@@ -463,6 +463,7 @@ int32_t mbc_spawn(moonbit_bytes_t words, moonbit_bytes_t cmdline, moonbit_bytes_
   if (!ok) {
     fprintf(stderr, "mbc: CreateProcess failed (%lu), command length %d\n", (unsigned long)error,
             (int)Moonbit_array_length(cmdline));
+    fflush(stderr);
     return -1;
   }
   CloseHandle(pi.hThread);
