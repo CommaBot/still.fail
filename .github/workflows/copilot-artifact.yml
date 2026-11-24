@@ -140,6 +140,8 @@ jobs:
             .ci/mbc-store
           key: copilot-win-${{ hashFiles('apps/mbui/**', 'client/core-ts/**') }}
           restore-keys: copilot-win-
+      - name: Rebuild mbc from the patched source
+        run: rm -rf apps/mbui/mbui/tools/_build
       - name: Build the Windows app and its installer
         working-directory: apps/mbui
         env:
