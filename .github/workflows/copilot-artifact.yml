@@ -75,7 +75,30 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+
+  core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: corepack enable && corepack prepare pnpm@10.33.0 --activate
+      - name: Install the client core
+        working-directory: client/core-ts
+        run: pnpm install --frozen-lockfile
+      - name: Build the Hermes bytecode
+        working-directory: apps/mbui
+        run: scripts/core.sh hermes
+      - uses: actions/upload-artifact@v4
+        with:
+          name: copilot-core-hbc
+          path: apps/mbui/out/core/core.hbc
+          if-no-files-found: error
+          retention-days: 14
+
   windows:
+    needs: core
     runs-on: windows-2025
     timeout-minutes: 120
     defaults:
@@ -104,6 +127,10 @@ jobs:
       - name: Install the client core
         working-directory: client/core-ts
         run: pnpm install --frozen-lockfile --prefer-offline
+      - uses: actions/download-artifact@v4
+        with:
+          name: copilot-core-hbc
+          path: apps/mbui/out/core
       - uses: actions/cache@v4
         with:
           path: |
@@ -117,6 +144,7 @@ jobs:
         working-directory: apps/mbui
         env:
           MBUI_FRESH: "1"
+          MBUI_WIN_CORE: "0"
           MBC_STORE: ${{ github.workspace }}/.ci/mbc-store
           HBC_CACHE: ${{ github.workspace }}/.ci/hbc
         run: |
